@@ -11,11 +11,13 @@ public class Player : MonoBehaviour
 	[SerializeField] float attackRadius = 3f;
 	[SerializeField] Vector2 hitKick = new Vector2(20f, 10f);
 	[SerializeField] Transform hurtBox;
+	[SerializeField] AudioClip jumpSFX, attackSFX, walkSFX, gettingHitSFX;
 
 	Rigidbody2D myRigidBody2D;
 	Animator myAnimator;
 	BoxCollider2D myBoxCollider2D;
 	PolygonCollider2D myPlayersFeet;
+	AudioSource myAudioSource;
 
 	float startingGravityScale;
 	bool isHurting = false;
@@ -27,8 +29,10 @@ public class Player : MonoBehaviour
 		myAnimator = GetComponent<Animator>();
 		myBoxCollider2D = GetComponent<BoxCollider2D>();
 		myPlayersFeet = GetComponent<PolygonCollider2D>();
+		myAudioSource = GetComponent<AudioSource>();
 
 		startingGravityScale = myRigidBody2D.gravityScale;
+		myAnimator.SetTrigger("isExiting");
 	}
 
 	// Update is called once per frame
@@ -56,8 +60,19 @@ public class Player : MonoBehaviour
 
 		if(CrossPlatformInputManager.GetButtonDown("Vertical"))
 		{
-			FindObjectOfType<ExitDoor>().StartLoadingNextLevel();
+			myAnimator.SetTrigger("isEntering");
 		}
+	}
+
+	public void LoadNextLevel()
+	{
+		FindObjectOfType<ExitDoor>().StartLoadingNextLevel();
+		TurnOffRenderer();
+	}
+
+	public void TurnOffRenderer()
+	{
+		GetComponent<SpriteRenderer>().enabled = false;
 	}
 
 	private void Run()
@@ -87,6 +102,23 @@ public class Player : MonoBehaviour
 		myAnimator.SetBool("isRunning", runningHorizontally);
 	}
 
+	void StepsSFX()
+	{
+		bool playerMovingHorizontally = Mathf.Abs(myRigidBody2D.velocity.x) > Mathf.Epsilon;
+
+		if (playerMovingHorizontally) 
+		{
+			if(myPlayersFeet.IsTouchingLayers(LayerMask.GetMask("Ground")))
+			{
+				myAudioSource.PlayOneShot(walkSFX);
+			}
+		}
+		else
+		{
+			myAudioSource.Stop();
+		}
+	}
+
 	private void Jump()
 	{
 		if (!myPlayersFeet.IsTouchingLayers(LayerMask.GetMask("Ground"))) { return; }
@@ -97,6 +129,7 @@ public class Player : MonoBehaviour
 		{
 			Vector2 jumpVelocity = new Vector2(myRigidBody2D.velocity.x, jumpSpeed);
 			myRigidBody2D.velocity = jumpVelocity;
+			myAudioSource.PlayOneShot(jumpSFX);
 		}
 	}
 
@@ -105,6 +138,7 @@ public class Player : MonoBehaviour
 		if(CrossPlatformInputManager.GetButtonDown("Fire1"))
 		{
 			myAnimator.SetTrigger("isAttacking");
+			myAudioSource.PlayOneShot(attackSFX);
 			Collider2D[] enemiesToHit = Physics2D.OverlapCircleAll(hurtBox.position, attackRadius, LayerMask.GetMask("Enemy"));
 
 			foreach(Collider2D enemy in enemiesToHit)
@@ -137,6 +171,7 @@ public class Player : MonoBehaviour
 		// Takes the players position and sends them flying in the opposite direction of the enemy on hit
 		myRigidBody2D.velocity = hitKick * new Vector2(-transform.localScale.x, 1f);
 		myAnimator.SetTrigger("isHit");
+		myAudioSource.PlayOneShot(gettingHitSFX);
 		isHurting = true;
 		FindObjectOfType<GameSession>().ProcessPlayerDeath();
 		StartCoroutine(StopHurting());

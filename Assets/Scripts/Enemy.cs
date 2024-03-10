@@ -4,6 +4,7 @@ using UnityEngine;
 public class Enemy : MonoBehaviour
 {
     [SerializeField] float enemyRunSpeed = 5f;
+	[SerializeField] AudioClip dyingSFX;
     Rigidbody2D enemyRigidBody;
 	Animator enemyAnimator;
 
@@ -27,7 +28,14 @@ public class Enemy : MonoBehaviour
 		GetComponent<CapsuleCollider2D>().enabled = false;
 		GetComponent<BoxCollider2D>().enabled = false;
 		enemyRigidBody.bodyType = RigidbodyType2D.Static;
+		EnemyDyingSFX();
+
 		StartCoroutine(DestroyEnemy());
+	}
+
+	void EnemyDyingSFX()
+	{
+		AudioSource.PlayClipAtPoint(dyingSFX, Camera.main.transform.position);
 	}
 
 	IEnumerator DestroyEnemy()
